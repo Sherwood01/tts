@@ -3,13 +3,13 @@ const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const fileNote = document.getElementById("fileNote");
 const engineSelect = document.getElementById("engineSelect");
+const languageFilter = document.getElementById("languageFilter");
 const voiceSelect = document.getElementById("voiceSelect");
+const voiceSearch = document.getElementById("voiceSearch");
 const refreshVoicesBtn = document.getElementById("refreshVoicesBtn");
 const rateInput = document.getElementById("rateInput");
 const formatSelect = document.getElementById("formatSelect");
-const azureVoiceSelect = document.getElementById("azureVoiceSelect");
-const languageFilter = document.getElementById("languageFilter");
-const azureVoiceSearch = document.getElementById("azureVoiceSearch");
+const formatWrap = document.getElementById("formatWrap");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
@@ -19,10 +19,10 @@ const audioPlayer = document.getElementById("audioPlayer");
 const downloadLink = document.getElementById("downloadLink");
 const clearBtn = document.getElementById("clearBtn");
 
-let voices = [];
-let activeUtterance = null;
-let voicesLoaded = false;
+let browserVoices = [];
 let azureVoices = [];
+let voicesLoaded = false;
+let activeUtterance = null;
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -53,7 +53,10 @@ function resetAudio() {
 function updateEngineUI() {
   const engine = engineSelect.value;
   modelConfig.style.display = engine === "model" ? "block" : "none";
+  formatWrap.style.display = engine === "model" ? "flex" : "none";
   generateBtn.textContent = "\u751f\u6210\u8bed\u97f3";
+  updateLanguageFilter();
+  populateVoiceSelect();
 }
 
 function refreshVoices() {
@@ -63,10 +66,15 @@ function refreshVoices() {
 }
 
 function populateBrowserVoices() {
-  voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-  voiceSelect.innerHTML = "";
-  if (!voices.length) {
-    voicesLoaded = false;
+  const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  browserVoices = filterBrowserVoices(voices.map((v) => ({
+    name: v.name,
+    lang: v.lang || "",
+    label: `${v.name} (${v.lang || ""})`,
+  })));
+  voicesLoaded = !!browserVoices.length;
+  if (!voicesLoaded) {
+    voiceSelect.innerHTML = "";
     const opt = document.createElement("option");
     opt.value = "";
     opt.textContent = "\u6d4f\u89c8\u5668\u8bed\u97f3\u4e0d\u53ef\u7528";
@@ -74,14 +82,8 @@ function populateBrowserVoices() {
     voiceSelect.disabled = true;
     return;
   }
-  voicesLoaded = true;
-  voiceSelect.disabled = false;
-  voices.forEach((voice) => {
-    const opt = document.createElement("option");
-    opt.value = voice.name;
-    opt.textContent = `${voice.name} (${voice.lang || ""})`;
-    voiceSelect.appendChild(opt);
-  });
+  updateLanguageFilter();
+  populateVoiceSelect();
 }
 
 function normalizeAzureVoices(list) {
@@ -91,12 +93,7 @@ function normalizeAzureVoices(list) {
       const lang = v.Locale || "";
       const localeName = v.LocaleName || v.Locale || "";
       const label = localeName ? `${localeName} - ${name}` : name;
-      return {
-        name,
-        label,
-        lang,
-        gender: v.Gender || "",
-      };
+      return { name, lang, label };
     })
     .filter((v) => v.name);
 }
@@ -124,55 +121,22 @@ function isEnglishLocale(lang) {
   return lang.toLowerCase().startsWith("en");
 }
 
-function applyAzureSearch(list) {
-  const term = (azureVoiceSearch && azureVoiceSearch.value ? azureVoiceSearch.value : "").trim().toLowerCase();
-  if (!term) return list;
+function isNaturalAzureVoice(name) {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  return n.includes("neural");
+}
+
+function filterAzureVoices(list) {
   return list.filter((v) => {
-    const name = (v.name || "").toLowerCase();
-    const label = (v.label || "").toLowerCase();
-    const lang = (v.lang || "").toLowerCase();
-    return name.includes(term) || label.includes(term) || lang.includes(term);
+    const langOk = isChineseLocale(v.lang) || isEnglishLocale(v.lang);
+    const naturalOk = isNaturalAzureVoice(v.name);
+    return langOk && naturalOk;
   });
 }
 
-function getFilteredAzureVoices() {
-  const filter = languageFilter ? languageFilter.value : "zh_en";
-  if (filter === "zh") {
-    return azureVoices.filter((v) => isChineseLocale(v.lang));
-  }
-  if (filter === "en") {
-    return azureVoices.filter((v) => isEnglishLocale(v.lang));
-  }
-  if (filter === "all") {
-    return azureVoices;
-  }
-  return azureVoices.filter(
-    (v) => isChineseLocale(v.lang) || isEnglishLocale(v.lang)
-  );
-}
-
-function populateAzureVoices() {
-  const current = azureVoiceSelect.value;
-  const list = applyAzureSearch(getFilteredAzureVoices());
-  azureVoiceSelect.innerHTML = "";
-  if (!list.length) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "\u65e0\u5339\u914d\u8bed\u97f3";
-    azureVoiceSelect.appendChild(opt);
-    azureVoiceSelect.disabled = true;
-    return;
-  }
-  azureVoiceSelect.disabled = false;
-  list.forEach((voice) => {
-    const opt = document.createElement("option");
-    opt.value = voice.name;
-    opt.textContent = voice.label;
-    if (voice.name === current || (!current && voice.name === "zh-CN-XiaoxiaoNeural")) {
-      opt.selected = true;
-    }
-    azureVoiceSelect.appendChild(opt);
-  });
+function filterBrowserVoices(list) {
+  return list.filter((v) => isChineseLocale(v.lang) || isEnglishLocale(v.lang));
 }
 
 async function loadAzureVoices() {
@@ -186,16 +150,137 @@ async function loadAzureVoices() {
     if (!normalized.length) {
       throw new Error("empty list");
     }
-    azureVoices = sortAzureVoices(normalized);
-    populateAzureVoices();
-    setStatus("已加载 Azure 语音列表");
+    azureVoices = sortAzureVoices(filterAzureVoices(normalized));
+    if (engineSelect.value === "model") {
+      updateLanguageFilter();
+      populateVoiceSelect();
+    }
+    setStatus("\u5df2\u52a0\u8f7d Azure \u8bed\u97f3\u5217\u8868");
   } catch (err) {
     azureVoices = [];
-    populateAzureVoices();
-    setStatus("无法获取 Azure 语音列表");
+    if (engineSelect.value === "model") {
+      updateLanguageFilter();
+      populateVoiceSelect();
+    }
+    setStatus("\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868");
   }
 }
 
+function getActiveVoices() {
+  if (engineSelect.value === "model") {
+    return azureVoices;
+  }
+  return browserVoices;
+}
+
+function updateLanguageFilter() {
+  const current = languageFilter.value || "all";
+  const options = [
+    { value: "all", label: "全部" },
+    { value: "zh", label: "中文" },
+    { value: "en", label: "英文" },
+  ];
+
+  languageFilter.innerHTML = "";
+  options.forEach((opt) => {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    if (opt.value === current) {
+      o.selected = true;
+    }
+    languageFilter.appendChild(o);
+  });
+
+  if (![...languageFilter.options].some((o) => o.value === current)) {
+    languageFilter.value = "all";
+  }
+}
+
+
+function isChineseVoice(v) {
+  const lang = (v.lang || "").toLowerCase();
+  const label = (v.label || "").toLowerCase();
+  const name = (v.name || "").toLowerCase();
+  return (
+    lang.startsWith("zh") ||
+    lang.startsWith("yue") ||
+    lang.startsWith("wuu") ||
+    lang.startsWith("cmn") ||
+    label.includes("chinese") ||
+    label.includes("中文") ||
+    name.includes("chinese") ||
+    name.includes("中文")
+  );
+}
+
+function isEnglishVoice(v) {
+  const lang = (v.lang || "").toLowerCase();
+  const label = (v.label || "").toLowerCase();
+  const name = (v.name || "").toLowerCase();
+  return (
+    lang.startsWith("en") ||
+    label.includes("english") ||
+    label.includes("英文") ||
+    name.includes("english") ||
+    name.includes("英文")
+  );
+}
+
+function isNaturalVoice(v, engine) {
+  const name = (v.name || "").toLowerCase();
+  if (engine === "model") {
+    return name.includes("neural");
+  }
+  // Browser voices: keep only Natural/Online variants when present
+  if (name.includes("natural")) return true;
+  if (name.includes("online")) return true;
+  return false;
+}
+
+function applyFilters(list) {
+  const lang = languageFilter.value || "all";
+  const term = (voiceSearch.value || "").trim().toLowerCase();
+  const engine = engineSelect.value;
+
+  return list.filter((v) => {
+    if (!isNaturalVoice(v, engine)) return false;
+
+    if (lang === "zh" && !isChineseVoice(v)) return false;
+    if (lang === "en" && !isEnglishVoice(v)) return false;
+
+    if (!term) return true;
+    const name = (v.name || "").toLowerCase();
+    const label = (v.label || "").toLowerCase();
+    const l = (v.lang || "").toLowerCase();
+    return name.includes(term) || label.includes(term) || l.includes(term);
+  });
+}
+
+
+function populateVoiceSelect() {
+  const list = applyFilters(getActiveVoices());
+  const current = voiceSelect.value;
+  voiceSelect.innerHTML = "";
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "\u65e0\u5339\u914d\u8bed\u97f3";
+    voiceSelect.appendChild(opt);
+    voiceSelect.disabled = true;
+    return;
+  }
+  voiceSelect.disabled = false;
+  list.forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = v.label || v.name;
+    if (v.name === current) {
+      opt.selected = true;
+    }
+    voiceSelect.appendChild(opt);
+  });
+}
 
 function stopSpeech() {
   if (window.speechSynthesis) {
@@ -246,14 +331,8 @@ clearBtn.addEventListener("click", () => {
 });
 
 engineSelect.addEventListener("change", updateEngineUI);
-
-languageFilter.addEventListener("change", () => {
-  populateAzureVoices();
-});
-
-azureVoiceSearch.addEventListener("input", () => {
-  populateAzureVoices();
-});
+languageFilter.addEventListener("change", populateVoiceSelect);
+voiceSearch.addEventListener("input", populateVoiceSelect);
 
 playBtn.addEventListener("click", () => {
   if (!window.speechSynthesis) {
@@ -267,7 +346,7 @@ playBtn.addEventListener("click", () => {
   }
   stopSpeech();
   const utterance = new SpeechSynthesisUtterance(text);
-  const selectedVoice = voices.find((v) => v.name === voiceSelect.value);
+  const selectedVoice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSelect.value);
   if (selectedVoice) {
     utterance.voice = selectedVoice;
   }
@@ -302,8 +381,8 @@ document.addEventListener(
 );
 
 async function callModelTTS(text) {
-  const voice = azureVoiceSelect.value;
-  if (!voice) {
+  const voice = voiceSelect.value;
+  if (!voice || !azureVoices.find((v) => v.name === voice)) {
     throw new Error("\u8bf7\u5148\u9009\u62e9 Azure TTS \u8bed\u97f3");
   }
 

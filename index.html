@@ -43,50 +43,40 @@
             <span>&#x8F6C;&#x6362;&#x5F15;&#x64CE;</span>
             <select id="engineSelect">
               <option value="browser">&#x6D4F;&#x89C8;&#x5668;&#x8BED;&#x97F3; (Edge/Chrome)</option>
-              <option value="model">&#x5927;&#x6A21;&#x578B; TTS (Azure)</option>
+              <option value="model" selected>&#x5927;&#x6A21;&#x578B; TTS (Azure)</option>
             </select>
           </label>
           <label class="control">
-            <span>&#x6D4F;&#x89C8;&#x5668;&#x8BED;&#x97F3;</span>
+            <span>&#x8BED;&#x8A00;&#x7B5B;&#x9009;</span>
+            <select id="languageFilter"></select>
+          </label>
+          <label class="control">
+            <span>&#x8BED;&#x97F3;&#x7B5B;&#x9009;</span>
             <select id="voiceSelect"></select>
           </label>
+          <label class="control">
+            <span>&#x641C;&#x7D22;&#x8BED;&#x97F3;</span>
+            <input id="voiceSearch" type="text" placeholder="&#x4F8B;&#x5982; en-US, Xiaoxiao" />
+          </label>
+        </div>
+
+        <div class="row">
           <button id="refreshVoicesBtn" class="ghost" type="button">&#x5237;&#x65B0;&#x8BED;&#x97F3;&#x5217;&#x8868;</button>
           <label class="control">
             <span>&#x8BED;&#x901F;</span>
             <input id="rateInput" type="range" min="0.6" max="1.4" step="0.1" value="1" />
           </label>
+          <label id="formatWrap" class="control">
+            <span>&#x8F93;&#x51FA;&#x683C;&#x5F0F;</span>
+            <select id="formatSelect">
+              <option value="mp3">mp3</option>
+              <option value="wav">wav</option>
+              <option value="ogg">ogg</option>
+            </select>
+          </label>
         </div>
 
         <div id="modelConfig" class="panel">
-          <div class="row">
-            <label class="control wide">
-              <span>Azure TTS &#x8BED;&#x97F3;</span>
-              <select id="azureVoiceSelect"></select>
-            </label>
-            <label class="control">
-              <span>&#x8BED;&#x97F3;&#x7B5B;&#x9009;</span>
-              <select id="languageFilter">
-                <option value="zh_en" selected>&#x4E2D;&#x6587;(&#x542B;&#x7CA4;&#x8BED;/&#x5434;&#x8BED;) + &#x82F1;&#x6587;</option>
-                <option value="zh">&#x4EC5;&#x4E2D;&#x6587;</option>
-                <option value="en">&#x4EC5;&#x82F1;&#x6587;</option>
-                <option value="all">&#x5168;&#x90E8;</option>
-              </select>
-            </label>
-            <label class="control">
-              <span>&#x641C;&#x7D22;&#x8BED;&#x97F3;</span>
-              <input id="azureVoiceSearch" type="text" placeholder="&#x4F8B;&#x5982; en-US, Xiaoxiao" />
-            </label>
-          </div>
-          <div class="row">
-            <label class="control">
-              <span>&#x8F93;&#x51FA;&#x683C;&#x5F0F;</span>
-              <select id="formatSelect">
-                <option value="mp3">mp3</option>
-                <option value="wav">wav</option>
-                <option value="ogg">ogg</option>
-              </select>
-            </label>
-          </div>
           <p class="note">&#x5927;&#x6A21;&#x578B;&#x5F15;&#x64CE;&#x9ED8;&#x8BA4;&#x8C03;&#x7528; /api/tts (Vercel Serverless)</p>
         </div>
 
