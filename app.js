@@ -123,21 +123,34 @@ function normalizeAzureVoices(list) {
 }
 
 async function loadAzureVoices() {
-  try {
-    const res = await fetch("/api/voices");
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+  const sources = [
+    { url: "/api/voices-doc", label: "文档列表" },
+    { url: "/api/voices", label: "Azure API" },
+  ];
+
+  for (const source of sources) {
+    try {
+      const res = await fetch(source.url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const normalized = normalizeAzureVoices(data);
+      if (!normalized.length) {
+        throw new Error("empty list");
+      }
+      azureVoices = normalized;
+      setStatus(`已加载语音列表 (${source.label})`);
+      return;
+    } catch (err) {
+      // try next source
     }
-    const data = await res.json();
-    const normalized = normalizeAzureVoices(data);
-    if (!normalized.length) {
-      throw new Error("empty list");
-    }
-    azureVoices = normalized;
-  } catch (err) {
-    azureVoices = [];
   }
+
+  azureVoices = [];
+  setStatus("无法获取语音列表，将使用默认匹配");
 }
+
 
 function resolveAzureVoice(browserVoiceName) {
   if (!browserVoiceName) return "zh-CN-XiaoxiaoNeural";
