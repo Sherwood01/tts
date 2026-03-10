@@ -153,25 +153,26 @@ async function loadAzureVoices() {
 
 
 function resolveAzureVoice(browserVoiceName) {
-  if (!browserVoiceName) return "zh-CN-XiaoxiaoNeural";
+  if (!browserVoiceName) return null;
   const browserVoice = voices.find((v) => v.name === browserVoiceName);
-  if (!browserVoice) return "zh-CN-XiaoxiaoNeural";
+  if (!browserVoice) return null;
 
   if (!azureVoices.length) {
-    const lang = browserVoice.lang || "zh-CN";
-    if (lang.startsWith("en")) return "en-US-JennyNeural";
-    return "zh-CN-XiaoxiaoNeural";
+    return null;
   }
 
+  // Try exact locale match first
   const exact = azureVoices.find((v) => v.lang === browserVoice.lang);
   if (exact) return exact.name;
 
+  // Then try base language match
   const base = (browserVoice.lang || "").split("-")[0];
   const sameBase = azureVoices.find((v) => v.lang && v.lang.startsWith(base));
   if (sameBase) return sameBase.name;
 
-  return "zh-CN-XiaoxiaoNeural";
+  return null;
 }
+
 
 function stopSpeech() {
   if (window.speechSynthesis) {
@@ -274,9 +275,14 @@ document.addEventListener(
 );
 
 async function callModelTTS(text) {
+  const resolvedVoice = resolveAzureVoice(voiceSelect.value);
+  if (!resolvedVoice) {
+    throw new Error("当前选择的浏览器语音无法匹配到 Azure，请换一个语言或确认语音列表已加载");
+  }
+
   const payload = {
     text,
-    voice: resolveAzureVoice(voiceSelect.value),
+    voice: resolvedVoice,
     format: formatSelect.value,
   };
 
