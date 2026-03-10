@@ -163,3 +163,29 @@ audio {
     width: 100%;
   }
 }
+
+.status-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(79, 79, 79, 0.35);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  display: none;
+  animation: spin 0.9s linear infinite;
+}
+
+.spinner.is-active {
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

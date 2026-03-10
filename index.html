@@ -76,17 +76,18 @@
           </label>
         </div>
 
-        <div id="modelConfig" class="panel">
-          <p class="note">&#x5927;&#x6A21;&#x578B;&#x5F15;&#x64CE;&#x9ED8;&#x8BA4;&#x8C03;&#x7528; /api/tts (Vercel Serverless)</p>
-        </div>
-
         <div class="row">
-          <button id="playBtn" type="button">&#x64AD;&#x653E;</button>
+          <button id="playBtn" class="accent" type="button">&#x64AD;&#x653E;</button>
           <button id="stopBtn" class="ghost" type="button">&#x505C;&#x6B62;</button>
-          <button id="generateBtn" class="accent" type="button">&#x751F;&#x6210;&#x8BED;&#x97F3;</button>
         </div>
         <div class="row meta">
-          <div id="status">&#x51C6;&#x5907;&#x5C31;&#x7EEA;</div>
+          <div id="playHint">&#x64AD;&#x653E;&#x4F1A;&#x5148;&#x751F;&#x6210;&#x97F3;&#x9891;&#xFF0C;&#x5B8C;&#x6210;&#x540E;&#x53EF;&#x4E0B;&#x8F7D;</div>
+        </div>
+        <div class="row meta">
+          <div class="status-wrap">
+            <span id="loadingSpinner" class="spinner" aria-hidden="true"></span>
+            <span id="status">&#x51C6;&#x5907;&#x5C31;&#x7EEA;</span>
+          </div>
         </div>
       </section>
 

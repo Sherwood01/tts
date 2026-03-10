@@ -13,8 +13,8 @@ const formatWrap = document.getElementById("formatWrap");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
-const generateBtn = document.getElementById("generateBtn");
 const statusEl = document.getElementById("status");
+const loadingSpinner = document.getElementById("loadingSpinner");
 const audioPlayer = document.getElementById("audioPlayer");
 const downloadLink = document.getElementById("downloadLink");
 const clearBtn = document.getElementById("clearBtn");
@@ -23,6 +23,15 @@ let browserVoices = [];
 let azureVoices = [];
 let voicesLoaded = false;
 let activeUtterance = null;
+
+function setLoading(isLoading) {
+  if (!loadingSpinner) return;
+  if (isLoading) {
+    loadingSpinner.classList.add("is-active");
+  } else {
+    loadingSpinner.classList.remove("is-active");
+  }
+}
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -54,7 +63,6 @@ function updateEngineUI() {
   const engine = engineSelect.value;
   modelConfig.style.display = engine === "model" ? "block" : "none";
   formatWrap.style.display = engine === "model" ? "flex" : "none";
-  generateBtn.textContent = "\u751f\u6210\u8bed\u97f3";
   updateLanguageFilter();
   populateVoiceSelect();
 }
@@ -334,29 +342,51 @@ engineSelect.addEventListener("change", updateEngineUI);
 languageFilter.addEventListener("change", populateVoiceSelect);
 voiceSearch.addEventListener("input", populateVoiceSelect);
 
-playBtn.addEventListener("click", () => {
-  if (!window.speechSynthesis) {
-    setStatus("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u8bed\u97f3\u5408\u6210");
-    return;
-  }
+playBtn.addEventListener("click", async () => {
   const text = textInput.value.trim();
   if (!text) {
     setStatus("\u8bf7\u5148\u8f93\u5165\u6587\u672c");
     return;
   }
-  stopSpeech();
-  const utterance = new SpeechSynthesisUtterance(text);
-  const selectedVoice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSelect.value);
-  if (selectedVoice) {
-    utterance.voice = selectedVoice;
+
+  resetAudio();
+
+  const engine = engineSelect.value;
+  if (engine === "browser") {
+    if (!window.speechSynthesis) {
+      setStatus("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u8bed\u97f3\u5408\u6210");
+      return;
+    }
+    stopSpeech();
+    const utterance = new SpeechSynthesisUtterance(text);
+    setLoading(true);
+    const selectedVoice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSelect.value);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    utterance.rate = Number(rateInput.value);
+    utterance.onstart = () => setStatus("\u6b63\u5728\u64ad\u653e\u6d4f\u89c8\u5668\u8bed\u97f3");
+    utterance.onend = () => setStatus("\u64ad\u653e\u7ed3\u675f");
+    utterance.onerror = () => setStatus("\u64ad\u653e\u5931\u8d25");
+    activeUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+    return;
   }
-  utterance.rate = Number(rateInput.value);
-  utterance.onstart = () => setStatus("\u6b63\u5728\u64ad\u653e\u6d4f\u89c8\u5668\u8bed\u97f3");
-  utterance.onend = () => setStatus("\u64ad\u653e\u7ed3\u675f");
-  utterance.onerror = () => setStatus("\u64ad\u653e\u5931\u8d25");
-  activeUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
+
+  try {
+    setStatus("\u6b63\u5728\u751f\u6210\u8bed\u97f3...");
+    const blob = await callModelTTS(text);
+    const filename = `tts.${formatSelect.value}`;
+    audioPlayer.src = URL.createObjectURL(blob);
+    setDownload(blob, filename);
+    audioPlayer.play();
+    setStatus("\u6b63\u5728\u64ad\u653e\u751f\u6210\u8bed\u97f3");
+  } catch (err) {
+    setLoading(false);
+    setStatus(err.message || "\u751f\u6210\u5931\u8d25");
+  }
 });
+
 
 stopBtn.addEventListener("click", () => {
   stopSpeech();
@@ -422,32 +452,7 @@ async function callModelTTS(text) {
   return await res.blob();
 }
 
-generateBtn.addEventListener("click", async () => {
-  const text = textInput.value.trim();
-  if (!text) {
-    setStatus("\u8bf7\u5148\u8f93\u5165\u6587\u672c");
-    return;
-  }
 
-  resetAudio();
-
-  const engine = engineSelect.value;
-  if (engine === "browser") {
-    setStatus("\u6d4f\u89c8\u5668\u8bed\u97f3\u53ea\u652f\u6301\u64ad\u653e\uff0c\u4e0d\u652f\u6301\u4e0b\u8f7d\uff0c\u8bf7\u6539\u7528\u5927\u6a21\u578b\u5f15\u64ce");
-    return;
-  }
-
-  try {
-    setStatus("\u6b63\u5728\u751f\u6210\u8bed\u97f3...");
-    const blob = await callModelTTS(text);
-    const filename = `tts.${formatSelect.value}`;
-    audioPlayer.src = URL.createObjectURL(blob);
-    setDownload(blob, filename);
-    setStatus("\u751f\u6210\u5b8c\u6210");
-  } catch (err) {
-    setStatus(err.message || "\u751f\u6210\u5931\u8d25");
-  }
-});
 
 updateCharCount();
 updateEngineUI();
