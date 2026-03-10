@@ -4,9 +4,9 @@ const charCount = document.getElementById("charCount");
 const fileNote = document.getElementById("fileNote");
 const engineSelect = document.getElementById("engineSelect");
 const voiceSelect = document.getElementById("voiceSelect");
+const voiceSearch = document.getElementById("voiceSearch");
 const refreshVoicesBtn = document.getElementById("refreshVoicesBtn");
 const rateInput = document.getElementById("rateInput");
-const azureVoiceSelect = document.getElementById("azureVoiceSelect");
 const formatSelect = document.getElementById("formatSelect");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
@@ -21,33 +21,7 @@ let voices = [];
 let activeUtterance = null;
 let voicesLoaded = false;
 
-let azureVoices = [
-  { name: "zh-CN-XiaoxiaoNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Xiaoxiao" },
-  { name: "zh-CN-YunxiNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Yunxi" },
-  { name: "zh-CN-YunjianNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Yunjian" },
-  { name: "zh-CN-XiaoyiNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Xiaoyi" },
-  { name: "zh-CN-YunyangNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Yunyang" },
-  { name: "zh-HK-HiuGaaiNeural", label: "\u4e2d\u6587(\u7ca4\u8bed) - HiuGaai" },
-  { name: "zh-HK-WanLungNeural", label: "\u4e2d\u6587(\u7ca4\u8bed) - WanLung" },
-  { name: "zh-TW-HsiaoChenNeural", label: "\u4e2d\u6587(\u53f0\u6e7e) - HsiaoChen" },
-  { name: "zh-TW-YunJheNeural", label: "\u4e2d\u6587(\u53f0\u6e7e) - YunJhe" },
-  { name: "en-US-JennyNeural", label: "English(US) - Jenny" },
-  { name: "en-US-GuyNeural", label: "English(US) - Guy" }
-];
-
-function populateAzureVoices() {
-  if (!azureVoiceSelect) return;
-  azureVoiceSelect.innerHTML = "";
-  azureVoices.forEach((voice) => {
-    const opt = document.createElement("option");
-    opt.value = voice.name;
-    opt.textContent = voice.label;
-    if (voice.name === "zh-CN-XiaoxiaoNeural") {
-      opt.selected = true;
-    }
-    azureVoiceSelect.appendChild(opt);
-  });
-}
+let azureVoices = [];
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -82,17 +56,18 @@ function updateEngineUI() {
 }
 
 function refreshVoices() {
-  populateVoices();
-  setTimeout(populateVoices, 500);
-  setTimeout(populateVoices, 1500);
+  populateBrowserVoices();
+  setTimeout(populateBrowserVoices, 500);
+  setTimeout(populateBrowserVoices, 1500);
 }
 
-function populateVoices() {
+function populateBrowserVoices() {
   voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-  voiceSelect.innerHTML = "";
   if (!voices.length) {
+    voicesLoaded = false;
+    voiceSelect.innerHTML = "";
     const opt = document.createElement("option");
-    opt.value = "default";
+    opt.value = "";
     opt.textContent = "\u6d4f\u89c8\u5668\u8bed\u97f3\u4e0d\u53ef\u7528";
     voiceSelect.appendChild(opt);
     voiceSelect.disabled = true;
@@ -100,12 +75,89 @@ function populateVoices() {
   }
   voicesLoaded = true;
   voiceSelect.disabled = false;
-  voices.forEach((voice) => {
+  populateVoiceSelect();
+}
+
+function applyVoiceSearch(list) {
+  const term = (voiceSearch && voiceSearch.value ? voiceSearch.value : "").trim().toLowerCase();
+  if (!term) return list;
+  return list.filter((v) => {
+    const name = (v.name || "").toLowerCase();
+    const lang = (v.lang || "").toLowerCase();
+    return name.includes(term) || lang.includes(term);
+  });
+}
+
+function populateVoiceSelect() {
+  const current = voiceSelect.value;
+  const list = applyVoiceSearch(voices);
+  voiceSelect.innerHTML = "";
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "\u65e0\u5339\u914d\u8bed\u97f3";
+    voiceSelect.appendChild(opt);
+    voiceSelect.disabled = true;
+    return;
+  }
+  voiceSelect.disabled = false;
+  list.forEach((voice) => {
     const opt = document.createElement("option");
     opt.value = voice.name;
-    opt.textContent = `${voice.name} (${voice.lang})`;
+    opt.textContent = `${voice.name} (${voice.lang || ""})`;
+    if (voice.name === current) {
+      opt.selected = true;
+    }
     voiceSelect.appendChild(opt);
   });
+}
+
+function normalizeAzureVoices(list) {
+  return (list || [])
+    .map((v) => {
+      const name = v.ShortName || v.Name || "";
+      const lang = v.Locale || "";
+      return { name, lang };
+    })
+    .filter((v) => v.name);
+}
+
+async function loadAzureVoices() {
+  try {
+    const res = await fetch("/api/voices");
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const normalized = normalizeAzureVoices(data);
+    if (!normalized.length) {
+      throw new Error("empty list");
+    }
+    azureVoices = normalized;
+  } catch (err) {
+    azureVoices = [];
+  }
+}
+
+function resolveAzureVoice(browserVoiceName) {
+  if (!browserVoiceName) return "zh-CN-XiaoxiaoNeural";
+  const browserVoice = voices.find((v) => v.name === browserVoiceName);
+  if (!browserVoice) return "zh-CN-XiaoxiaoNeural";
+
+  if (!azureVoices.length) {
+    const lang = browserVoice.lang || "zh-CN";
+    if (lang.startsWith("en")) return "en-US-JennyNeural";
+    return "zh-CN-XiaoxiaoNeural";
+  }
+
+  const exact = azureVoices.find((v) => v.lang === browserVoice.lang);
+  if (exact) return exact.name;
+
+  const base = (browserVoice.lang || "").split("-")[0];
+  const sameBase = azureVoices.find((v) => v.lang && v.lang.startsWith(base));
+  if (sameBase) return sameBase.name;
+
+  return "zh-CN-XiaoxiaoNeural";
 }
 
 function stopSpeech() {
@@ -158,6 +210,10 @@ clearBtn.addEventListener("click", () => {
 
 engineSelect.addEventListener("change", updateEngineUI);
 
+voiceSearch.addEventListener("input", () => {
+  if (voicesLoaded) populateVoiceSelect();
+});
+
 playBtn.addEventListener("click", () => {
   if (!window.speechSynthesis) {
     setStatus("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u8bed\u97f3\u5408\u6210");
@@ -207,7 +263,7 @@ document.addEventListener(
 async function callModelTTS(text) {
   const payload = {
     text,
-    voice: azureVoiceSelect.value || "zh-CN-XiaoxiaoNeural",
+    voice: resolveAzureVoice(voiceSelect.value),
     format: formatSelect.value,
   };
 
@@ -270,9 +326,9 @@ generateBtn.addEventListener("click", async () => {
 
 updateCharCount();
 updateEngineUI();
-populateAzureVoices();
+loadAzureVoices();
 
 if (window.speechSynthesis) {
   refreshVoices();
-  window.speechSynthesis.onvoiceschanged = populateVoices;
+  window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
