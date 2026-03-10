@@ -106,8 +106,9 @@ function normalizeAzureVoices(list) {
       const name = v.ShortName || v.Name || "";
       const lang = v.Locale || "";
       const localeName = v.LocaleName || v.Locale || "";
+      const voiceType = v.VoiceType || "";
       const label = localeName ? `${localeName} - ${name}` : name;
-      return { name, lang, label };
+      return { name, lang, label, voiceType };
     })
     .filter((v) => v.name);
 }
@@ -135,16 +136,16 @@ function isEnglishLocale(lang) {
   return lang.toLowerCase().startsWith("en");
 }
 
-function isNaturalAzureVoice(name) {
-  if (!name) return false;
-  const n = name.toLowerCase();
-  return n.includes("neural");
+function isNaturalAzureVoice(name, voiceType) {
+  const n = (name || "").toLowerCase();
+  const t = (voiceType || "").toLowerCase();
+  return n.includes("neural") || t.includes("neural");
 }
 
 function filterAzureVoices(list) {
   return list.filter((v) => {
     const langOk = isChineseLocale(v.lang) || isEnglishLocale(v.lang);
-    const naturalOk = isNaturalAzureVoice(v.name);
+    const naturalOk = isNaturalAzureVoice(v.name, v.voiceType);
     return langOk && naturalOk;
   });
 }
@@ -246,8 +247,9 @@ function isEnglishVoice(v) {
 
 function isNaturalVoice(v, engine) {
   const name = (v.name || "").toLowerCase();
+  const voiceType = (v.voiceType || "").toLowerCase();
   if (engine === "model") {
-    return name.includes("neural");
+    return name.includes("neural") || voiceType.includes("neural");
   }
   // Browser voices: keep only Natural/Online variants when present
   if (name.includes("natural")) return true;
@@ -490,5 +492,6 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
 
 
