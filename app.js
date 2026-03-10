@@ -239,12 +239,6 @@ async function loadAzureVoices() {
       updateLanguageFilter();
       languageFilter.value = "all";
       populateVoiceSelect();
-  if (savedSettings && savedSettings.language) {
-    const value = String(savedSettings.language);
-    if ([...languageFilter.options].some((o) => o.value === value)) {
-      languageFilter.value = value;
-    }
-  }
     }
     setStatus("\u5df2\u52a0\u8f7d Azure \u8bed\u97f3\u5217\u8868");
   } catch (err) {
@@ -257,7 +251,6 @@ async function loadAzureVoices() {
     setStatus(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? "\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868，\u672c\u5730\u8bf7\u4f7f\u7528 vercel dev \u6216\u90e8\u7f72\u5230 Vercel\u6d4b\u8bd5\u3002" : "\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868");
   } finally {
     setLoading(false);
-  }
   }
 }
 
@@ -598,6 +591,8 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
 
 
 
