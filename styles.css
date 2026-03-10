@@ -148,11 +148,6 @@ button.ghost {
   text-decoration: none;
 }
 
-audio {
-  width: 100%;
-  margin-top: 10px;
-}
-
 @media (max-width: 720px) {
   .row {
     flex-direction: column;
@@ -242,3 +237,47 @@ body.is-loading .loading-overlay {
   font-weight: 600;
   color: var(--ink);
 }
+
+audio {
+  width: 100%;
+  margin-top: 0;
+}
+
+.audio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: rgba(17, 17, 17, 0.05);
+}
+
+@media (max-width: 720px) {
+  .audio-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+\n
+
+
+
+
+
+

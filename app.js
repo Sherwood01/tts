@@ -14,9 +14,14 @@ const formatWrap = document.getElementById("formatWrap");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
+
 const statusEl = document.getElementById("status");
 const loadingSpinner = document.getElementById("loadingSpinner");
 const loadingOverlay = document.getElementById("loadingOverlay");
+const loadingOverlayText = document.getElementById("loadingOverlayText");
+const STORAGE_KEY = "tts-demo-settings";
+const DEFAULT_LOADING_TEXT = "\u6b63\u5728\u751f\u6210\uff0c\u8bf7\u7a0d\u5019...";
+let savedSettings = null;
 const audioPlayer = document.getElementById("audioPlayer");
 const downloadLink = document.getElementById("downloadLink");
 const clearBtn = document.getElementById("clearBtn");
@@ -26,7 +31,11 @@ let azureVoices = [];
 let voicesLoaded = false;
 let activeUtterance = null;
 
-function setLoading(isLoading) {
+function setLoading(isLoading, message) {
+  const text = message || DEFAULT_LOADING_TEXT;
+  if (loadingOverlayText) {
+    loadingOverlayText.textContent = text;
+  }
   if (loadingSpinner) {
     if (isLoading) {
       loadingSpinner.classList.add("is-active");
@@ -60,6 +69,33 @@ function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function saveSettings() {
+  const data = {
+    language: languageFilter.value || "all",
+    voice: voiceSelect.value || "",
+    search: voiceSearch.value || "",
+    rate: rateInput.value || "1",
+    format: formatSelect.value || "mp3",
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object") return;
+    savedSettings = data;
+    if (typeof data.search === "string") voiceSearch.value = data.search;
+    if (typeof data.rate === "string" || typeof data.rate === "number") {
+      rateInput.value = String(data.rate);
+    }
+    if (typeof data.format === "string") formatSelect.value = data.format;
+  } catch (err) {
+    savedSettings = null;
+  }
+}
 function updateRateValue() {
   if (!rateValue) return;
   const value = Number(rateInput.value || 1).toFixed(1);
@@ -184,6 +220,7 @@ function filterBrowserVoices(list) {
 
 async function loadAzureVoices() {
   try {
+    setLoading(true, "\u52a0\u8f7d\u8bed\u97f3\u5217\u8868\u4e2d...");
     const res = await fetch("/api/voices");
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
@@ -198,6 +235,12 @@ async function loadAzureVoices() {
       updateLanguageFilter();
       languageFilter.value = "all";
       populateVoiceSelect();
+  if (savedSettings && savedSettings.language) {
+    const value = String(savedSettings.language);
+    if ([...languageFilter.options].some((o) => o.value === value)) {
+      languageFilter.value = value;
+    }
+  }
     }
     setStatus("\u5df2\u52a0\u8f7d Azure \u8bed\u97f3\u5217\u8868");
   } catch (err) {
@@ -208,6 +251,9 @@ async function loadAzureVoices() {
       populateVoiceSelect();
     }
     setStatus(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? "\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868，\u672c\u5730\u8bf7\u4f7f\u7528 vercel dev \u6216\u90e8\u7f72\u5230 Vercel\u6d4b\u8bd5\u3002" : "\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868");
+  } finally {
+    setLoading(false);
+  }
   }
 }
 
@@ -327,6 +373,12 @@ function populateVoiceSelect() {
     }
     voiceSelect.appendChild(opt);
   });
+  if (savedSettings && savedSettings.voice) {
+    const savedVoice = String(savedSettings.voice);
+    if ([...voiceSelect.options].some((o) => o.value === savedVoice)) {
+      voiceSelect.value = savedVoice;
+    }
+  }
 }
 
 function stopSpeech() {
@@ -356,6 +408,12 @@ async function readFile(file) {
 fileInput.addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
+  const maxSize = Number(fileInput.dataset.maxSize || 0);
+  if (maxSize && file.size > maxSize) {
+    setStatus("\u6587\u4ef6\u592a\u5927\uff0c\u8bf7\u4e0a\u4f20 10MB \u4ee5\u5185\u7684\u6587\u4ef6");
+    fileInput.value = "";
+    return;
+  }
   try {
     const text = await readFile(file);
     textInput.value = text.trim();
@@ -367,7 +425,7 @@ fileInput.addEventListener("change", async (event) => {
 });
 
 textInput.addEventListener("input", updateCharCount);
-rateInput.addEventListener("input", updateRateValue);
+rateInput.addEventListener("input", () => { updateRateValue(); saveSettings(); });
 
 clearBtn.addEventListener("click", () => {
   fileInput.value = "";
@@ -382,8 +440,10 @@ engineSelect.addEventListener("change", () => {
   voiceSearch.value = "";
   updateEngineUI();
 });
-languageFilter.addEventListener("change", populateVoiceSelect);
-voiceSearch.addEventListener("input", populateVoiceSelect);
+languageFilter.addEventListener("change", () => { populateVoiceSelect(); saveSettings(); });
+formatSelect.addEventListener("change", saveSettings);
+voiceSearch.addEventListener("input", () => { populateVoiceSelect(); saveSettings(); });
+voiceSelect.addEventListener("change", saveSettings);
 
 playBtn.addEventListener("click", async () => {
   const text = textInput.value.trim();
@@ -446,15 +506,18 @@ playBtn.addEventListener("click", async () => {
 });
 
 
-stopBtn.addEventListener("click", () => {
+function stopAllPlayback() {
   stopSpeech();
   if (audioPlayer) {
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
   }
   setLoading(false);
-  setStatus("\u5df2\u505c\u6b62");
-});
+  setStatus("\u64ad\u653e\u505c\u6b62");
+}
+
+stopBtn.addEventListener("click", stopAllPlayback);
+
 
 refreshVoicesBtn.addEventListener("click", () => {
   refreshVoices();
@@ -518,13 +581,11 @@ async function callModelTTS(text) {
 
 
 updateCharCount();
+loadSettings();
 updateRateValue();
 updateEngineUI();
 window.addEventListener("beforeunload", () => {
-  stopSpeech();
-  if (audioPlayer) {
-    audioPlayer.pause();
-  }
+  stopAllPlayback();
 });
 
 loadAzureVoices();
@@ -533,6 +594,22 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
