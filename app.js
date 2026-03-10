@@ -4,8 +4,10 @@ const charCount = document.getElementById("charCount");
 const fileNote = document.getElementById("fileNote");
 const engineSelect = document.getElementById("engineSelect");
 const voiceSelect = document.getElementById("voiceSelect");
+const refreshVoicesBtn = document.getElementById("refreshVoicesBtn");
 const rateInput = document.getElementById("rateInput");
-const azureVoiceInput = document.getElementById("azureVoiceInput");\nconst formatSelect = document.getElementById("formatSelect");
+const azureVoiceSelect = document.getElementById("azureVoiceSelect");
+const formatSelect = document.getElementById("formatSelect");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
@@ -17,6 +19,35 @@ const clearBtn = document.getElementById("clearBtn");
 
 let voices = [];
 let activeUtterance = null;
+let voicesLoaded = false;
+
+let azureVoices = [
+  { name: "zh-CN-XiaoxiaoNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Xiaoxiao" },
+  { name: "zh-CN-YunxiNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Yunxi" },
+  { name: "zh-CN-YunjianNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Yunjian" },
+  { name: "zh-CN-XiaoyiNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Xiaoyi" },
+  { name: "zh-CN-YunyangNeural", label: "\u4e2d\u6587(\u666e\u901a\u8bdd) - Yunyang" },
+  { name: "zh-HK-HiuGaaiNeural", label: "\u4e2d\u6587(\u7ca4\u8bed) - HiuGaai" },
+  { name: "zh-HK-WanLungNeural", label: "\u4e2d\u6587(\u7ca4\u8bed) - WanLung" },
+  { name: "zh-TW-HsiaoChenNeural", label: "\u4e2d\u6587(\u53f0\u6e7e) - HsiaoChen" },
+  { name: "zh-TW-YunJheNeural", label: "\u4e2d\u6587(\u53f0\u6e7e) - YunJhe" },
+  { name: "en-US-JennyNeural", label: "English(US) - Jenny" },
+  { name: "en-US-GuyNeural", label: "English(US) - Guy" }
+];
+
+function populateAzureVoices() {
+  if (!azureVoiceSelect) return;
+  azureVoiceSelect.innerHTML = "";
+  azureVoices.forEach((voice) => {
+    const opt = document.createElement("option");
+    opt.value = voice.name;
+    opt.textContent = voice.label;
+    if (voice.name === "zh-CN-XiaoxiaoNeural") {
+      opt.selected = true;
+    }
+    azureVoiceSelect.appendChild(opt);
+  });
+}
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -47,11 +78,13 @@ function resetAudio() {
 function updateEngineUI() {
   const engine = engineSelect.value;
   modelConfig.style.display = engine === "model" ? "block" : "none";
-  if (engine === "browser") {
-    generateBtn.textContent = "生成语音";
-  } else {
-    generateBtn.textContent = "生成语音";
-  }
+  generateBtn.textContent = "\u751f\u6210\u8bed\u97f3";
+}
+
+function refreshVoices() {
+  populateVoices();
+  setTimeout(populateVoices, 500);
+  setTimeout(populateVoices, 1500);
 }
 
 function populateVoices() {
@@ -60,10 +93,13 @@ function populateVoices() {
   if (!voices.length) {
     const opt = document.createElement("option");
     opt.value = "default";
-    opt.textContent = "默认";
+    opt.textContent = "\u6d4f\u89c8\u5668\u8bed\u97f3\u4e0d\u53ef\u7528";
     voiceSelect.appendChild(opt);
+    voiceSelect.disabled = true;
     return;
   }
+  voicesLoaded = true;
+  voiceSelect.disabled = false;
   voices.forEach((voice) => {
     const opt = document.createElement("option");
     opt.value = voice.name;
@@ -81,7 +117,7 @@ function stopSpeech() {
 
 async function readFile(file) {
   const ext = file.name.split(".").pop().toLowerCase();
-  fileNote.textContent = `已加载: ${file.name}`;
+  fileNote.textContent = `\u5df2\u52a0\u8f7d: ${file.name}`;
   if (ext === "txt") {
     return await file.text();
   }
@@ -91,9 +127,9 @@ async function readFile(file) {
     return result.value || "";
   }
   if (ext === "doc") {
-    throw new Error("浏览器端暂不支持 .doc，请先转换为 .docx");
+    throw new Error("\u6d4f\u89c8\u5668\u7aef\u6682\u4e0d\u652f\u6301 .doc\uff0c\u8bf7\u5148\u8f6c\u6362\u4e3a .docx");
   }
-  throw new Error("不支持的文件类型");
+  throw new Error("\u4e0d\u652f\u6301\u7684\u6587\u4ef6\u7c7b\u578b");
 }
 
 fileInput.addEventListener("change", async (event) => {
@@ -103,7 +139,7 @@ fileInput.addEventListener("change", async (event) => {
     const text = await readFile(file);
     textInput.value = text.trim();
     updateCharCount();
-    setStatus("文件已导入");
+    setStatus("\u6587\u4ef6\u5df2\u5bfc\u5165");
   } catch (err) {
     setStatus(err.message);
   }
@@ -117,19 +153,19 @@ clearBtn.addEventListener("click", () => {
   fileNote.textContent = "";
   updateCharCount();
   resetAudio();
-  setStatus("已清空");
+  setStatus("\u5df2\u6e05\u7a7a");
 });
 
 engineSelect.addEventListener("change", updateEngineUI);
 
 playBtn.addEventListener("click", () => {
   if (!window.speechSynthesis) {
-    setStatus("当前浏览器不支持语音合成");
+    setStatus("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u8bed\u97f3\u5408\u6210");
     return;
   }
   const text = textInput.value.trim();
   if (!text) {
-    setStatus("请先输入文本");
+    setStatus("\u8bf7\u5148\u8f93\u5165\u6587\u672c");
     return;
   }
   stopSpeech();
@@ -139,22 +175,39 @@ playBtn.addEventListener("click", () => {
     utterance.voice = selectedVoice;
   }
   utterance.rate = Number(rateInput.value);
-  utterance.onstart = () => setStatus("正在播放浏览器语音");
-  utterance.onend = () => setStatus("播放结束");
-  utterance.onerror = () => setStatus("播放失败");
+  utterance.onstart = () => setStatus("\u6b63\u5728\u64ad\u653e\u6d4f\u89c8\u5668\u8bed\u97f3");
+  utterance.onend = () => setStatus("\u64ad\u653e\u7ed3\u675f");
+  utterance.onerror = () => setStatus("\u64ad\u653e\u5931\u8d25");
   activeUtterance = utterance;
   window.speechSynthesis.speak(utterance);
 });
 
 stopBtn.addEventListener("click", () => {
   stopSpeech();
-  setStatus("已停止");
+  setStatus("\u5df2\u505c\u6b62");
 });
+
+refreshVoicesBtn.addEventListener("click", () => {
+  refreshVoices();
+  if (!voicesLoaded) {
+    setStatus("\u5df2\u5237\u65b0\u8bed\u97f3\u5217\u8868\uff0c\u5982\u4ecd\u4e3a\u7a7a\u8bf7\u5728 https \u73af\u5883\u4e0b\u6253\u5f00");
+  }
+});
+
+document.addEventListener(
+  "click",
+  () => {
+    if (!voicesLoaded) {
+      refreshVoices();
+    }
+  },
+  { once: true }
+);
 
 async function callModelTTS(text) {
   const payload = {
     text,
-    voice: azureVoiceInput.value.trim() || "zh-CN-XiaoxiaoNeural",
+    voice: azureVoiceSelect.value || "zh-CN-XiaoxiaoNeural",
     format: formatSelect.value,
   };
 
@@ -168,7 +221,7 @@ async function callModelTTS(text) {
 
   if (!res.ok) {
     const textErr = await res.text();
-    throw new Error(`请求失败: ${res.status} ${textErr}`);
+    throw new Error(`\u8bf7\u6c42\u5931\u8d25: ${res.status} ${textErr}`);
   }
 
   const contentType = res.headers.get("Content-Type") || "";
@@ -182,15 +235,16 @@ async function callModelTTS(text) {
       }
       return new Blob([bytes], { type: data.content_type || "audio/mpeg" });
     }
-    throw new Error("返回的 JSON 缺少 audio_base64 字段");
+    throw new Error("\u8fd4\u56de\u7684 JSON \u7f3a\u5c11 audio_base64 \u5b57\u6bb5");
   }
 
   return await res.blob();
 }
+
 generateBtn.addEventListener("click", async () => {
   const text = textInput.value.trim();
   if (!text) {
-    setStatus("请先输入文本");
+    setStatus("\u8bf7\u5148\u8f93\u5165\u6587\u672c");
     return;
   }
 
@@ -198,26 +252,27 @@ generateBtn.addEventListener("click", async () => {
 
   const engine = engineSelect.value;
   if (engine === "browser") {
-    setStatus("浏览器语音只支持播放，不支持下载，请改用大模型引擎");
+    setStatus("\u6d4f\u89c8\u5668\u8bed\u97f3\u53ea\u652f\u6301\u64ad\u653e\uff0c\u4e0d\u652f\u6301\u4e0b\u8f7d\uff0c\u8bf7\u6539\u7528\u5927\u6a21\u578b\u5f15\u64ce");
     return;
   }
 
   try {
-    setStatus("正在生成语音...");
+    setStatus("\u6b63\u5728\u751f\u6210\u8bed\u97f3...");
     const blob = await callModelTTS(text);
     const filename = `tts.${formatSelect.value}`;
     audioPlayer.src = URL.createObjectURL(blob);
     setDownload(blob, filename);
-    setStatus("生成完成");
+    setStatus("\u751f\u6210\u5b8c\u6210");
   } catch (err) {
-    setStatus(err.message || "生成失败");
+    setStatus(err.message || "\u751f\u6210\u5931\u8d25");
   }
 });
 
 updateCharCount();
 updateEngineUI();
+populateAzureVoices();
 
 if (window.speechSynthesis) {
-  populateVoices();
+  refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateVoices;
 }
