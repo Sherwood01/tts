@@ -1,4 +1,20 @@
-﻿export default async function handler(req, res) {
+function escapeXml(input) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function mapOutputFormat(format) {
+  const key = (format || "mp3").toLowerCase();
+  if (key === "wav") return "riff-24khz-16bit-mono-pcm";
+  if (key === "ogg") return "ogg-24khz-16bit-mono-opus";
+  return "audio-24khz-48kbitrate-mono-mp3";
+}
+
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
@@ -11,30 +27,30 @@
       return;
     }
 
-    const endpoint = process.env.TTS_ENDPOINT;
-    const apiKey = process.env.TTS_API_KEY;
-    if (!endpoint) {
-      res.status(500).json({ error: "TTS_ENDPOINT not configured" });
+    const key = process.env.AZURE_SPEECH_KEY;
+    const region = process.env.AZURE_SPEECH_REGION;
+    if (!key || !region) {
+      res.status(500).json({ error: "AZURE_SPEECH_KEY or AZURE_SPEECH_REGION not configured" });
       return;
     }
 
-    const payload = {
-      text,
-      voice: voice || "default",
-      format: format || "mp3",
-    };
+    const outputFormat = mapOutputFormat(format);
+    const voiceName = (voice || "zh-CN-XiaoxiaoNeural").trim();
+    const ssml = `<?xml version="1.0" encoding="utf-8"?>
+<speak version="1.0" xml:lang="zh-CN">
+  <voice name="${voiceName}">${escapeXml(text)}</voice>
+</speak>`;
 
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    if (apiKey) {
-      headers.Authorization = `Bearer ${apiKey}`;
-    }
-
+    const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
     const upstream = await fetch(endpoint, {
       method: "POST",
-      headers,
-      body: JSON.stringify(payload),
+      headers: {
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": outputFormat,
+        "Ocp-Apim-Subscription-Key": key,
+        "User-Agent": "tts-demo",
+      },
+      body: ssml,
     });
 
     if (!upstream.ok) {
@@ -43,23 +59,11 @@
       return;
     }
 
-    const contentType = upstream.headers.get("Content-Type") || "";
-    if (contentType.includes("application/json")) {
-      const data = await upstream.json();
-      if (!data.audio_base64) {
-        res.status(502).json({ error: "Missing audio_base64 from upstream" });
-        return;
-      }
-      const buffer = Buffer.from(data.audio_base64, "base64");
-      res.setHeader("Content-Type", data.content_type || "audio/mpeg");
-      res.setHeader("Content-Disposition", "attachment; filename=tts.mp3");
-      res.status(200).send(buffer);
-      return;
-    }
-
+    const contentType = upstream.headers.get("Content-Type") || "audio/mpeg";
     const arrayBuffer = await upstream.arrayBuffer();
-    res.setHeader("Content-Type", contentType || "application/octet-stream");
-    res.setHeader("Content-Disposition", "attachment; filename=tts.mp3");
+    const filename = `tts.${(format || "mp3").toLowerCase()}`;
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
     res.status(200).send(Buffer.from(arrayBuffer));
   } catch (err) {
     res.status(500).json({ error: err?.message || "Server error" });

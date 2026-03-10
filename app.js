@@ -1,13 +1,11 @@
-﻿const fileInput = document.getElementById("fileInput");
+const fileInput = document.getElementById("fileInput");
 const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const fileNote = document.getElementById("fileNote");
 const engineSelect = document.getElementById("engineSelect");
 const voiceSelect = document.getElementById("voiceSelect");
 const rateInput = document.getElementById("rateInput");
-const endpointInput = document.getElementById("endpointInput");
-const apiKeyInput = document.getElementById("apiKeyInput");
-const formatSelect = document.getElementById("formatSelect");
+const azureVoiceInput = document.getElementById("azureVoiceInput");\nconst formatSelect = document.getElementById("formatSelect");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
@@ -154,24 +152,17 @@ stopBtn.addEventListener("click", () => {
 });
 
 async function callModelTTS(text) {
-  const endpoint = endpointInput.value.trim() || "/api/tts";
   const payload = {
     text,
-    voice: voiceSelect.value || "default",
+    voice: azureVoiceInput.value.trim() || "zh-CN-XiaoxiaoNeural",
     format: formatSelect.value,
   };
 
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  const apiKey = apiKeyInput.value.trim();
-  if (apiKey) {
-    headers.Authorization = `Bearer ${apiKey}`;
-  }
-
-  const res = await fetch(endpoint, {
+  const res = await fetch("/api/tts", {
     method: "POST",
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
   });
 
@@ -196,7 +187,6 @@ async function callModelTTS(text) {
 
   return await res.blob();
 }
-
 generateBtn.addEventListener("click", async () => {
   const text = textInput.value.trim();
   if (!text) {
