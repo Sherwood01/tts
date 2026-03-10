@@ -38,10 +38,11 @@ export default async function handler(req, res) {
     const voiceName = (voice || "zh-CN-XiaoxiaoNeural").trim();
     const numericRate = typeof rate === "number" ? rate : Number(rate || 1);
     const clampedRate = Number.isFinite(numericRate) ? Math.min(2, Math.max(0.1, numericRate)) : 1;
-    const percent = Math.round(clampedRate * 100);
+    const delta = Math.round((clampedRate - 1) * 100);
+    const rateAttr = delta >= 0 ? `+${delta}%` : `${delta}%`;
     const ssml = `<?xml version="1.0" encoding="utf-8"?>
 <speak version="1.0" xml:lang="zh-CN">
-  <voice name="${voiceName}"><prosody rate="${percent}%">${escapeXml(text)}</prosody></voice>
+  <voice name="${voiceName}"><prosody rate="${rateAttr}">${escapeXml(text)}</prosody></voice>
 </speak>`;
 
     const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
@@ -72,3 +73,4 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err?.message || "Server error" });
   }
 }
+
