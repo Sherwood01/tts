@@ -409,7 +409,7 @@ playBtn.addEventListener("click", async () => {
     }
     utterance.rate = Number(rateInput.value);
     utterance.onstart = () => {
-      setLoading(true);
+      setLoading(false);
       setStatus("\u6b63\u5728\u64ad\u653e\u6d4f\u89c8\u5668\u8bed\u97f3");
     };
     utterance.onend = () => {
@@ -448,6 +448,10 @@ playBtn.addEventListener("click", async () => {
 
 stopBtn.addEventListener("click", () => {
   stopSpeech();
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+  }
   setLoading(false);
   setStatus("\u5df2\u505c\u6b62");
 });
@@ -516,12 +520,21 @@ async function callModelTTS(text) {
 updateCharCount();
 updateRateValue();
 updateEngineUI();
+window.addEventListener("beforeunload", () => {
+  stopSpeech();
+  if (audioPlayer) {
+    audioPlayer.pause();
+  }
+});
+
 loadAzureVoices();
 
 if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
 
 
 
