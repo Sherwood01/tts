@@ -135,9 +135,13 @@ function updateEngineUI() {
 }
 
 function refreshVoices() {
+  setLoading(true, "\u52a0\u8f7d\u8bed\u97f3\u5217\u8868\u4e2d...");
   populateBrowserVoices();
   setTimeout(populateBrowserVoices, 500);
-  setTimeout(populateBrowserVoices, 1500);
+  setTimeout(() => {
+    populateBrowserVoices();
+    setLoading(false);
+  }, 1500);
 }
 
 function populateBrowserVoices() {
@@ -594,6 +598,8 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
 
 
 
