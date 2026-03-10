@@ -1,4 +1,4 @@
-const fileInput = document.getElementById("fileInput");
+﻿const fileInput = document.getElementById("fileInput");
 const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const fileNote = document.getElementById("fileNote");
@@ -64,6 +64,9 @@ function updateEngineUI() {
   modelConfig.style.display = engine === "model" ? "block" : "none";
   formatWrap.style.display = engine === "model" ? "flex" : "none";
   updateLanguageFilter();
+  if (engineSelect.value === "model" && !azureVoices.length) {
+    loadAzureVoices();
+  }
   populateVoiceSelect();
 }
 
@@ -91,6 +94,9 @@ function populateBrowserVoices() {
     return;
   }
   updateLanguageFilter();
+  if (engineSelect.value === "model" && !azureVoices.length) {
+    loadAzureVoices();
+  }
   populateVoiceSelect();
 }
 
@@ -161,6 +167,7 @@ async function loadAzureVoices() {
     azureVoices = sortAzureVoices(filterAzureVoices(normalized));
     if (engineSelect.value === "model") {
       updateLanguageFilter();
+      languageFilter.value = "all";
       populateVoiceSelect();
     }
     setStatus("\u5df2\u52a0\u8f7d Azure \u8bed\u97f3\u5217\u8868");
@@ -168,9 +175,10 @@ async function loadAzureVoices() {
     azureVoices = [];
     if (engineSelect.value === "model") {
       updateLanguageFilter();
+      languageFilter.value = "all";
       populateVoiceSelect();
     }
-    setStatus("\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868");
+    setStatus(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? "\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868，\u672c\u5730\u8bf7\u4f7f\u7528 vercel dev \u6216\u90e8\u7f72\u5230 Vercel\u6d4b\u8bd5\u3002" : "\u65e0\u6cd5\u83b7\u53d6 Azure \u8bed\u97f3\u5217\u8868");
   }
 }
 
@@ -204,6 +212,7 @@ function updateLanguageFilter() {
     languageFilter.value = "all";
   }
 }
+
 
 
 function isChineseVoice(v) {
@@ -338,7 +347,10 @@ clearBtn.addEventListener("click", () => {
   setStatus("\u5df2\u6e05\u7a7a");
 });
 
-engineSelect.addEventListener("change", updateEngineUI);
+engineSelect.addEventListener("change", () => {
+  voiceSearch.value = "";
+  updateEngineUI();
+});
 languageFilter.addEventListener("change", populateVoiceSelect);
 voiceSearch.addEventListener("input", populateVoiceSelect);
 
@@ -365,21 +377,36 @@ playBtn.addEventListener("click", async () => {
       utterance.voice = selectedVoice;
     }
     utterance.rate = Number(rateInput.value);
-    utterance.onstart = () => setStatus("\u6b63\u5728\u64ad\u653e\u6d4f\u89c8\u5668\u8bed\u97f3");
-    utterance.onend = () => setStatus("\u64ad\u653e\u7ed3\u675f");
-    utterance.onerror = () => setStatus("\u64ad\u653e\u5931\u8d25");
+    utterance.onstart = () => {
+      setLoading(true);
+      setStatus("\u6b63\u5728\u64ad\u653e\u6d4f\u89c8\u5668\u8bed\u97f3");
+    };
+    utterance.onend = () => {
+      setLoading(false);
+      setStatus("\u64ad\u653e\u7ed3\u675f");
+    };
+    utterance.onerror = () => {
+      setLoading(false);
+      setStatus("\u64ad\u653e\u5931\u8d25");
+    };
     activeUtterance = utterance;
     window.speechSynthesis.speak(utterance);
     return;
   }
 
   try {
+    setLoading(true);
     setStatus("\u6b63\u5728\u751f\u6210\u8bed\u97f3...");
     const blob = await callModelTTS(text);
     const filename = `tts.${formatSelect.value}`;
     audioPlayer.src = URL.createObjectURL(blob);
     setDownload(blob, filename);
-    audioPlayer.play();
+    audioPlayer.onplay = () => setLoading(false);
+    audioPlayer.onended = () => setStatus("\u64ad\u653e\u7ed3\u675f");
+    audioPlayer.play().catch(() => {
+      setLoading(false);
+      setStatus("\u64ad\u653e\u5931\u8d25");
+    });
     setStatus("\u6b63\u5728\u64ad\u653e\u751f\u6210\u8bed\u97f3");
   } catch (err) {
     setLoading(false);
@@ -390,6 +417,7 @@ playBtn.addEventListener("click", async () => {
 
 stopBtn.addEventListener("click", () => {
   stopSpeech();
+  setLoading(false);
   setStatus("\u5df2\u505c\u6b62");
 });
 
@@ -462,3 +490,5 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
