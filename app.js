@@ -15,6 +15,7 @@ const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
 const statusEl = document.getElementById("status");
 const loadingSpinner = document.getElementById("loadingSpinner");
+const loadingOverlay = document.getElementById("loadingOverlay");
 const audioPlayer = document.getElementById("audioPlayer");
 const downloadLink = document.getElementById("downloadLink");
 const clearBtn = document.getElementById("clearBtn");
@@ -25,11 +26,28 @@ let voicesLoaded = false;
 let activeUtterance = null;
 
 function setLoading(isLoading) {
-  if (!loadingSpinner) return;
-  if (isLoading) {
-    loadingSpinner.classList.add("is-active");
-  } else {
-    loadingSpinner.classList.remove("is-active");
+  if (loadingSpinner) {
+    if (isLoading) {
+      loadingSpinner.classList.add("is-active");
+    } else {
+      loadingSpinner.classList.remove("is-active");
+    }
+  }
+  if (loadingOverlay) {
+    if (isLoading) {
+      loadingOverlay.classList.add("is-active");
+      loadingOverlay.setAttribute("aria-hidden", "false");
+    } else {
+      loadingOverlay.classList.remove("is-active");
+      loadingOverlay.setAttribute("aria-hidden", "true");
+    }
+  }
+  if (document.body) {
+    if (isLoading) {
+      document.body.classList.add("is-loading");
+    } else {
+      document.body.classList.remove("is-loading");
+    }
   }
 }
 
@@ -492,6 +510,9 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
+
 
 
 

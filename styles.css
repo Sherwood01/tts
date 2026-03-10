@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --ink: #111111;
   --muted: #4f4f4f;
   --bg: #f4efe7;
@@ -188,4 +188,40 @@ audio {
   to {
     transform: rotate(360deg);
   }
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.35);
+  backdrop-filter: blur(2px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.loading-overlay.is-active {
+  display: flex;
+}
+
+.loading-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+body.is-loading {
+  overflow: hidden;
+}
+
+body.is-loading .loading-overlay {
+  display: flex;
 }
