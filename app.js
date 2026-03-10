@@ -8,6 +8,7 @@ const voiceSelect = document.getElementById("voiceSelect");
 const voiceSearch = document.getElementById("voiceSearch");
 const refreshVoicesBtn = document.getElementById("refreshVoicesBtn");
 const rateInput = document.getElementById("rateInput");
+const rateValue = document.getElementById("rateValue");
 const formatSelect = document.getElementById("formatSelect");
 const formatWrap = document.getElementById("formatWrap");
 const modelConfig = document.getElementById("modelConfig");
@@ -37,9 +38,13 @@ function setLoading(isLoading) {
     if (isLoading) {
       loadingOverlay.classList.add("is-active");
       loadingOverlay.setAttribute("aria-hidden", "false");
+      loadingOverlay.style.display = "flex";
+      loadingOverlay.style.pointerEvents = "all";
     } else {
       loadingOverlay.classList.remove("is-active");
       loadingOverlay.setAttribute("aria-hidden", "true");
+      loadingOverlay.style.display = "none";
+      loadingOverlay.style.pointerEvents = "none";
     }
   }
   if (document.body) {
@@ -55,6 +60,11 @@ function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function updateRateValue() {
+  if (!rateValue) return;
+  const value = Number(rateInput.value || 1).toFixed(1);
+  rateValue.textContent = `x${value}`;
+}
 function updateCharCount() {
   charCount.textContent = textInput.value.length.toString();
 }
@@ -357,6 +367,7 @@ fileInput.addEventListener("change", async (event) => {
 });
 
 textInput.addEventListener("input", updateCharCount);
+rateInput.addEventListener("input", updateRateValue);
 
 clearBtn.addEventListener("click", () => {
   fileInput.value = "";
@@ -503,6 +514,7 @@ async function callModelTTS(text) {
 
 
 updateCharCount();
+updateRateValue();
 updateEngineUI();
 loadAzureVoices();
 
@@ -510,6 +522,15 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
+
+
+
+
+
+
+
 
 
 

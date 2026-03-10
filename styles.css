@@ -225,3 +225,20 @@ body.is-loading {
 body.is-loading .loading-overlay {
   display: flex;
 }
+
+.rate-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rate-control input[type="range"] {
+  flex: 1 1 auto;
+}
+
+
+.rate-value-inline {
+  margin-left: 6px;
+  font-weight: 600;
+  color: var(--ink);
+}
