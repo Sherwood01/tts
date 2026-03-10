@@ -1,4 +1,4 @@
-function escapeXml(input) {
+﻿function escapeXml(input) {
   return input
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { text, voice, format } = req.body || {};
+    const { text, voice, format, rate } = req.body || {};
     if (!text || typeof text !== "string") {
       res.status(400).json({ error: "Missing text" });
       return;
@@ -36,9 +36,12 @@ export default async function handler(req, res) {
 
     const outputFormat = mapOutputFormat(format);
     const voiceName = (voice || "zh-CN-XiaoxiaoNeural").trim();
+    const numericRate = typeof rate === "number" ? rate : Number(rate || 1);
+    const clampedRate = Number.isFinite(numericRate) ? Math.min(2, Math.max(0.1, numericRate)) : 1;
+    const percent = Math.round(clampedRate * 100);
     const ssml = `<?xml version="1.0" encoding="utf-8"?>
 <speak version="1.0" xml:lang="zh-CN">
-  <voice name="${voiceName}">${escapeXml(text)}</voice>
+  <voice name="${voiceName}"><prosody rate="${percent}%">${escapeXml(text)}</prosody></voice>
 </speak>`;
 
     const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;

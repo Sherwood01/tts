@@ -539,11 +539,7 @@ async function callModelTTS(text) {
     throw new Error("\u8bf7\u5148\u9009\u62e9 Azure TTS \u8bed\u97f3");
   }
 
-  const payload = {
-    text,
-    voice,
-    format: formatSelect.value,
-  };
+  const payload = {\r\n    text,\r\n    voice,\r\n    format: formatSelect.value,\r\n    rate: Number(rateInput.value || 1),\r\n  };
 
   const res = await fetch("/api/tts", {
     method: "POST",
@@ -591,6 +587,9 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
+
 
 
 
