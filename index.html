@@ -47,12 +47,8 @@
             </select>
           </label>
           <label class="control">
-            <span>&#x8BED;&#x97F3;</span>
+            <span>&#x6D4F;&#x89C8;&#x5668;&#x8BED;&#x97F3;</span>
             <select id="voiceSelect"></select>
-          </label>
-          <label class="control">
-            <span>&#x641C;&#x7D22;&#x8BED;&#x97F3;</span>
-            <input id="voiceSearch" type="text" placeholder="&#x4F8B;&#x5982; en-US, Microsoft, Google" />
           </label>
           <button id="refreshVoicesBtn" class="ghost" type="button">&#x5237;&#x65B0;&#x8BED;&#x97F3;&#x5217;&#x8868;</button>
           <label class="control">
@@ -62,6 +58,25 @@
         </div>
 
         <div id="modelConfig" class="panel">
+          <div class="row">
+            <label class="control wide">
+              <span>Azure TTS &#x8BED;&#x97F3;</span>
+              <select id="azureVoiceSelect"></select>
+            </label>
+            <label class="control">
+              <span>&#x8BED;&#x97F3;&#x7B5B;&#x9009;</span>
+              <select id="languageFilter">
+                <option value="zh_en" selected>&#x4E2D;&#x6587;(&#x542B;&#x7CA4;&#x8BED;/&#x5434;&#x8BED;) + &#x82F1;&#x6587;</option>
+                <option value="zh">&#x4EC5;&#x4E2D;&#x6587;</option>
+                <option value="en">&#x4EC5;&#x82F1;&#x6587;</option>
+                <option value="all">&#x5168;&#x90E8;</option>
+              </select>
+            </label>
+            <label class="control">
+              <span>&#x641C;&#x7D22;&#x8BED;&#x97F3;</span>
+              <input id="azureVoiceSearch" type="text" placeholder="&#x4F8B;&#x5982; en-US, Xiaoxiao" />
+            </label>
+          </div>
           <div class="row">
             <label class="control">
               <span>&#x8F93;&#x51FA;&#x683C;&#x5F0F;</span>

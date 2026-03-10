@@ -4,10 +4,12 @@ const charCount = document.getElementById("charCount");
 const fileNote = document.getElementById("fileNote");
 const engineSelect = document.getElementById("engineSelect");
 const voiceSelect = document.getElementById("voiceSelect");
-const voiceSearch = document.getElementById("voiceSearch");
 const refreshVoicesBtn = document.getElementById("refreshVoicesBtn");
 const rateInput = document.getElementById("rateInput");
 const formatSelect = document.getElementById("formatSelect");
+const azureVoiceSelect = document.getElementById("azureVoiceSelect");
+const languageFilter = document.getElementById("languageFilter");
+const azureVoiceSearch = document.getElementById("azureVoiceSearch");
 const modelConfig = document.getElementById("modelConfig");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
@@ -20,7 +22,6 @@ const clearBtn = document.getElementById("clearBtn");
 let voices = [];
 let activeUtterance = null;
 let voicesLoaded = false;
-
 let azureVoices = [];
 
 function setStatus(message) {
@@ -63,9 +64,9 @@ function refreshVoices() {
 
 function populateBrowserVoices() {
   voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  voiceSelect.innerHTML = "";
   if (!voices.length) {
     voicesLoaded = false;
-    voiceSelect.innerHTML = "";
     const opt = document.createElement("option");
     opt.value = "";
     opt.textContent = "\u6d4f\u89c8\u5668\u8bed\u97f3\u4e0d\u53ef\u7528";
@@ -75,39 +76,10 @@ function populateBrowserVoices() {
   }
   voicesLoaded = true;
   voiceSelect.disabled = false;
-  populateVoiceSelect();
-}
-
-function applyVoiceSearch(list) {
-  const term = (voiceSearch && voiceSearch.value ? voiceSearch.value : "").trim().toLowerCase();
-  if (!term) return list;
-  return list.filter((v) => {
-    const name = (v.name || "").toLowerCase();
-    const lang = (v.lang || "").toLowerCase();
-    return name.includes(term) || lang.includes(term);
-  });
-}
-
-function populateVoiceSelect() {
-  const current = voiceSelect.value;
-  const list = applyVoiceSearch(voices);
-  voiceSelect.innerHTML = "";
-  if (!list.length) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "\u65e0\u5339\u914d\u8bed\u97f3";
-    voiceSelect.appendChild(opt);
-    voiceSelect.disabled = true;
-    return;
-  }
-  voiceSelect.disabled = false;
-  list.forEach((voice) => {
+  voices.forEach((voice) => {
     const opt = document.createElement("option");
     opt.value = voice.name;
     opt.textContent = `${voice.name} (${voice.lang || ""})`;
-    if (voice.name === current) {
-      opt.selected = true;
-    }
     voiceSelect.appendChild(opt);
   });
 }
@@ -117,60 +89,111 @@ function normalizeAzureVoices(list) {
     .map((v) => {
       const name = v.ShortName || v.Name || "";
       const lang = v.Locale || "";
-      return { name, lang };
+      const localeName = v.LocaleName || v.Locale || "";
+      const label = localeName ? `${localeName} - ${name}` : name;
+      return {
+        name,
+        label,
+        lang,
+        gender: v.Gender || "",
+      };
     })
     .filter((v) => v.name);
 }
 
-async function loadAzureVoices() {
-  const sources = [
-    { url: "/api/voices-doc", label: "文档列表" },
-    { url: "/api/voices", label: "Azure API" },
-  ];
-
-  for (const source of sources) {
-    try {
-      const res = await fetch(source.url);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      const normalized = normalizeAzureVoices(data);
-      if (!normalized.length) {
-        throw new Error("empty list");
-      }
-      azureVoices = normalized;
-      setStatus(`已加载语音列表 (${source.label})`);
-      return;
-    } catch (err) {
-      // try next source
-    }
-  }
-
-  azureVoices = [];
-  setStatus("无法获取语音列表，将使用默认匹配");
+function sortAzureVoices(list) {
+  return list.slice().sort((a, b) => {
+    if (a.lang === b.lang) return a.label.localeCompare(b.label);
+    return a.lang.localeCompare(b.lang);
+  });
 }
 
+function isChineseLocale(lang) {
+  if (!lang) return false;
+  const lower = lang.toLowerCase();
+  return (
+    lower.startsWith("zh") ||
+    lower.startsWith("yue") ||
+    lower.startsWith("wuu") ||
+    lower.startsWith("cmn")
+  );
+}
 
-function resolveAzureVoice(browserVoiceName) {
-  if (!browserVoiceName) return null;
-  const browserVoice = voices.find((v) => v.name === browserVoiceName);
-  if (!browserVoice) return null;
+function isEnglishLocale(lang) {
+  if (!lang) return false;
+  return lang.toLowerCase().startsWith("en");
+}
 
-  if (!azureVoices.length) {
-    return null;
+function applyAzureSearch(list) {
+  const term = (azureVoiceSearch && azureVoiceSearch.value ? azureVoiceSearch.value : "").trim().toLowerCase();
+  if (!term) return list;
+  return list.filter((v) => {
+    const name = (v.name || "").toLowerCase();
+    const label = (v.label || "").toLowerCase();
+    const lang = (v.lang || "").toLowerCase();
+    return name.includes(term) || label.includes(term) || lang.includes(term);
+  });
+}
+
+function getFilteredAzureVoices() {
+  const filter = languageFilter ? languageFilter.value : "zh_en";
+  if (filter === "zh") {
+    return azureVoices.filter((v) => isChineseLocale(v.lang));
   }
+  if (filter === "en") {
+    return azureVoices.filter((v) => isEnglishLocale(v.lang));
+  }
+  if (filter === "all") {
+    return azureVoices;
+  }
+  return azureVoices.filter(
+    (v) => isChineseLocale(v.lang) || isEnglishLocale(v.lang)
+  );
+}
 
-  // Try exact locale match first
-  const exact = azureVoices.find((v) => v.lang === browserVoice.lang);
-  if (exact) return exact.name;
+function populateAzureVoices() {
+  const current = azureVoiceSelect.value;
+  const list = applyAzureSearch(getFilteredAzureVoices());
+  azureVoiceSelect.innerHTML = "";
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "\u65e0\u5339\u914d\u8bed\u97f3";
+    azureVoiceSelect.appendChild(opt);
+    azureVoiceSelect.disabled = true;
+    return;
+  }
+  azureVoiceSelect.disabled = false;
+  list.forEach((voice) => {
+    const opt = document.createElement("option");
+    opt.value = voice.name;
+    opt.textContent = voice.label;
+    if (voice.name === current || (!current && voice.name === "zh-CN-XiaoxiaoNeural")) {
+      opt.selected = true;
+    }
+    azureVoiceSelect.appendChild(opt);
+  });
+}
 
-  // Then try base language match
-  const base = (browserVoice.lang || "").split("-")[0];
-  const sameBase = azureVoices.find((v) => v.lang && v.lang.startsWith(base));
-  if (sameBase) return sameBase.name;
-
-  return null;
+async function loadAzureVoices() {
+  try {
+    const res = await fetch("/api/voices");
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const normalized = normalizeAzureVoices(data);
+    if (!normalized.length) {
+      throw new Error("empty list");
+    }
+    azureVoices = sortAzureVoices(normalized);
+    populateAzureVoices();
+    setStatus("已加载 Azure 语音列表");
+  } catch (err) {
+    azureVoices = [];
+    populateAzureVoices();
+    setStatus("无法获取 Azure 语音列表");
+  }
 }
 
 
@@ -224,8 +247,12 @@ clearBtn.addEventListener("click", () => {
 
 engineSelect.addEventListener("change", updateEngineUI);
 
-voiceSearch.addEventListener("input", () => {
-  if (voicesLoaded) populateVoiceSelect();
+languageFilter.addEventListener("change", () => {
+  populateAzureVoices();
+});
+
+azureVoiceSearch.addEventListener("input", () => {
+  populateAzureVoices();
 });
 
 playBtn.addEventListener("click", () => {
@@ -275,14 +302,14 @@ document.addEventListener(
 );
 
 async function callModelTTS(text) {
-  const resolvedVoice = resolveAzureVoice(voiceSelect.value);
-  if (!resolvedVoice) {
-    throw new Error("当前选择的浏览器语音无法匹配到 Azure，请换一个语言或确认语音列表已加载");
+  const voice = azureVoiceSelect.value;
+  if (!voice) {
+    throw new Error("\u8bf7\u5148\u9009\u62e9 Azure TTS \u8bed\u97f3");
   }
 
   const payload = {
     text,
-    voice: resolvedVoice,
+    voice,
     format: formatSelect.value,
   };
 
