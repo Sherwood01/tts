@@ -1,0 +1,165 @@
+:root {
+  --ink: #111111;
+  --muted: #4f4f4f;
+  --bg: #f4efe7;
+  --card: #fff8f0;
+  --accent: #d86b4c;
+  --accent-dark: #b14e34;
+  --border: #e3d6c6;
+  --shadow: 0 20px 50px rgba(17, 17, 17, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 10% 20%, #ffe7d5, transparent 60%),
+    radial-gradient(circle at 90% 10%, #d6f2f0, transparent 55%),
+    linear-gradient(180deg, #f4efe7 0%, #f9f3eb 100%);
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 20px 64px;
+  display: grid;
+  gap: 24px;
+}
+
+.hero h1 {
+  font-family: "Fraunces", serif;
+  font-size: clamp(32px, 4vw, 52px);
+  margin: 8px 0 12px;
+}
+
+.hero .tag {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hero .sub {
+  color: var(--muted);
+  max-width: 560px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+  flex: 1 1 180px;
+}
+
+.control.wide {
+  flex: 2 1 320px;
+}
+
+.control span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  font: inherit;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+}
+
+button.accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+button.accent:hover {
+  background: var(--accent-dark);
+}
+
+button.ghost {
+  background: transparent;
+}
+
+.panel {
+  border: 1px dashed var(--border);
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  margin-bottom: 16px;
+}
+
+.meta {
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.note {
+  color: var(--muted);
+}
+
+.download {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+audio {
+  width: 100%;
+  margin-top: 10px;
+}
+
+@media (max-width: 720px) {
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  button {
+    width: 100%;
+  }
+}
