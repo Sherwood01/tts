@@ -125,8 +125,12 @@ function resetAudio() {
 
 function updateEngineUI() {
   const engine = engineSelect.value;
-  modelConfig.style.display = engine === "model" ? "block" : "none";
-  formatWrap.style.display = engine === "model" ? "flex" : "none";
+  if (modelConfig) {
+    modelConfig.style.display = engine === "model" ? "block" : "none";
+  }
+  if (formatWrap) {
+    formatWrap.style.display = engine === "model" ? "flex" : "none";
+  }
   updateLanguageFilter();
   if (engineSelect.value === "model" && !azureVoices.length) {
     loadAzureVoices();
@@ -240,6 +244,12 @@ async function loadAzureVoices() {
       languageFilter.value = "all";
       populateVoiceSelect();
     }
+  if (savedSettings && savedSettings.language) {
+    const value = String(savedSettings.language);
+    if ([...languageFilter.options].some((o) => o.value === value)) {
+      languageFilter.value = value;
+    }
+  }
     setStatus("\u5df2\u52a0\u8f7d Azure \u8bed\u97f3\u5217\u8868");
   } catch (err) {
     azureVoices = [];
@@ -539,7 +549,12 @@ async function callModelTTS(text) {
     throw new Error("\u8bf7\u5148\u9009\u62e9 Azure TTS \u8bed\u97f3");
   }
 
-  const payload = {\r\n    text,\r\n    voice,\r\n    format: formatSelect.value,\r\n    rate: Number(rateInput.value || 1),\r\n  };
+  const payload = {
+    text,
+    voice,
+    format: formatSelect.value,
+    rate: Number(rateInput.value || 1),
+  };
 
   const res = await fetch("/api/tts", {
     method: "POST",
@@ -587,6 +602,11 @@ if (window.speechSynthesis) {
   refreshVoices();
   window.speechSynthesis.onvoiceschanged = populateBrowserVoices;
 }
+
+
+
+
+
 
 
 
